@@ -1,23 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Form, Input, Modal, message, InputNumber, Select, Row, Col, DatePicker } from 'antd';
-import { callCreateJob, callUpdateJob, fetchAllSkillAPI, fetchAllCompanyAPI } from '../../../services/api.service';
+import { callCreateJob, callUpdateJob, fetchAllCompanyAPI } from '../../../services/api.service';
 import { LOCATION_LIST } from '../../../config/utils';
 import dayjs from 'dayjs';
 
 const ModalJob = ({ openModal, setOpenModal, dataInit, setDataInit, reloadTable }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-    const [skills, setSkills] = useState([]);
+    // const [skills, setSkills] = useState([]);
     const [companies, setCompanies] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [skillsRes, companiesRes] = await Promise.all([
-                    fetchAllSkillAPI('page=0&size=100'),
+                const [ companiesRes] = await Promise.all([
                     fetchAllCompanyAPI('page=0&size=100')
                 ]);
-                setSkills(skillsRes?.data?.result?.content ?? []);
                 setCompanies(companiesRes?.data?.result ?? []);
             } catch (error) {
                 console.error('Lỗi tải dữ liệu:', error);
@@ -28,11 +26,10 @@ const ModalJob = ({ openModal, setOpenModal, dataInit, setDataInit, reloadTable 
 
     useEffect(() => {
         if (dataInit) {
-            const { startDate, endDate, skills: skillList = [], company } = dataInit;
+            const { startDate, endDate, company } = dataInit;
 
             form.setFieldsValue({
                 ...dataInit,
-                skills: skillList.map(skill => skill.id),
                 company: company?.id,
                 startDate: startDate ? dayjs(startDate) : null,
                 endDate: endDate ? dayjs(endDate) : null,
@@ -50,7 +47,6 @@ const ModalJob = ({ openModal, setOpenModal, dataInit, setDataInit, reloadTable 
         setLoading(true);
         const payload = {
             ...values,
-            skills: values.skills.map(id => ({ id })),
             company: { id: values.company },
             startDate: values.startDate?.startOf('day').toDate() || null,
             endDate: values.endDate?.startOf('day').toDate() || null,
@@ -125,7 +121,7 @@ const ModalJob = ({ openModal, setOpenModal, dataInit, setDataInit, reloadTable 
                         </Form.Item>
                     </Col>
 
-                    <Col span={24} md={12}>
+                    {/* <Col span={24} md={12}>
                         <Form.Item
                             label="Skills"
                             name="skills"
@@ -142,7 +138,7 @@ const ModalJob = ({ openModal, setOpenModal, dataInit, setDataInit, reloadTable 
                                 }))}
                             />
                         </Form.Item>
-                    </Col>
+                    </Col> */}
 
                     <Col span={24} md={8}>
                         <Form.Item

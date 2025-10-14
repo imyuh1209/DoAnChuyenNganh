@@ -13,9 +13,11 @@ const HomePage = () => {
                 <Divider />
                 <JobCard />
             </div>
+            
 
         </>
     )
+    
 }
 
 export default HomePage;

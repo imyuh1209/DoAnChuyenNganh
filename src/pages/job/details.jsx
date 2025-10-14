@@ -1,92 +1,297 @@
-import React, { useEffect, useState } from "react";
-import { Col, Divider, Row, Skeleton, Tag } from "antd";
-import { DollarOutlined, EnvironmentOutlined, HistoryOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  Row,
+  Col,
+  Card,
+  Space,
+  Typography,
+  Tag,
+  Divider,
+  Button,
+  Skeleton,
+  Empty,
+  Tooltip,
+  Alert,
+} from "antd";
+import {
+  DollarOutlined,
+  EnvironmentOutlined,
+  HistoryOutlined,
+  ArrowLeftOutlined,
+  ShareAltOutlined,
+  StarOutlined,
+  ThunderboltFilled,
+} from "@ant-design/icons";
 import parse from "html-react-parser";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import ApplyModal from "../../components/client/modal/apply.modal";
 import { callFetchJobById } from "../../services/api.service";
 import styles from "../../styles/client.module.scss";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 dayjs.extend(relativeTime);
+const { Title, Text } = Typography;
+
+const metaItemStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  color: "#667085",
+};
+
+const pill = (text, color = "blue") => (
+  <Tag color={color} style={{ borderRadius: 999, padding: "2px 10px" }}>
+    {text}
+  </Tag>
+);
 
 const ClientJobDetailPage = () => {
-    const [jobDetail, setJobDetail] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+  const [jobDetail, setJobDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchErr, setFetchErr] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    const { id } = useParams();  // ✅ Lấy id từ URL path
+  const backend = import.meta.env.VITE_BACKEND_URL;
 
+  useEffect(() => {
+    const fetchJobDetail = async () => {
+      if (!id) return;
+      setLoading(true);
+      setFetchErr("");
+      try {
+        const res = await callFetchJobById(id);
+        const data = res?.data ?? res;
+        if (data?.id) {
+          setJobDetail(data);
+        } else {
+          setJobDetail(null);
+        }
+      } catch (error) {
+        console.error("Lỗi khi fetch dữ liệu công việc:", error);
+        setFetchErr(
+          error?.response?.data?.message ||
+            "Không tải được thông tin công việc. Vui lòng thử lại."
+        );
+        setJobDetail(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJobDetail();
+  }, [id]);
 
+  const salaryText = useMemo(() => {
+    const s = jobDetail?.salary ?? 0;
+    return `${(s + "").replace(/\B(?=(\d{3})+(?!\d))/g, ",")} đ`;
+  }, [jobDetail]);
 
+  const updatedText = useMemo(() => {
+    if (!jobDetail) return "";
+    const t = jobDetail.updatedAt || jobDetail.createdAt;
+    return t ? dayjs(t).fromNow() : "";
+  }, [jobDetail]);
 
-    useEffect(() => {
-        const fetchJobDetail = async () => {
-            if (id) {
-                setIsLoading(true);
-                try {
+  const companyLogo = useMemo(() => {
+    const logo = jobDetail?.company?.logo;
+    if (!logo) return null;
+    return `${backend}/storage/company/${logo}`;
+  }, [backend, jobDetail]);
 
-                    const res = await callFetchJobById(id);
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      // Antd message nằm ngoài scope — dùng native:
+      alert("Đã sao chép link!");
+    } catch {
+      alert("Không sao chép được link, thử lại sau.");
+    }
+  };
 
-                    if (res?.data) {
-                        setJobDetail(res.data);
-                    }
-                } catch (error) {
-                    console.error("Lỗi khi fetch dữ liệu công việc:", error);
-                }
-                setIsLoading(false);
-            }
-        };
-        fetchJobDetail();
-    }, [id]);
+  return (
+    <div className={`${styles["container"]}`}>
+      {/* Header actions */}
+      <div
+        className="section-header"
+        style={{ marginBottom: 12, display: "flex", justifyContent: "space-between" }}
+      >
+        <Button
+          icon={<ArrowLeftOutlined />}
+          type="text"
+          onClick={() => navigate(-1)}
+        >
+          Quay lại
+        </Button>
+        <Space>
+          <Tooltip title="Lưu công việc">
+            <Button icon={<StarOutlined />} />
+          </Tooltip>
+          <Tooltip title="Chia sẻ">
+            <Button icon={<ShareAltOutlined />} onClick={handleShare} />
+          </Tooltip>
+        </Space>
+      </div>
 
-    return (
-        <div className={`${styles["container"]} ${styles["detail-job-section"]}`}>
-            {isLoading ? (
-                <Skeleton />
+      <Row gutter={[16, 16]}>
+        {/* LEFT: Job detail */}
+        <Col xs={24} md={16}>
+          <Card
+            bodyStyle={{ padding: 20 }}
+            style={{ borderRadius: 12, boxShadow: "0 4px 24px rgba(18,38,63,0.06)" }}
+          >
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 6 }} />
+            ) : fetchErr ? (
+              <Alert type="error" message={fetchErr} showIcon />
+            ) : !jobDetail ? (
+              <Empty description="Không tìm thấy công việc" />
             ) : (
-                <Row gutter={[20, 20]}>
-                    {jobDetail && jobDetail.id && (
-                        <>
-                            <Col span={24} md={16}>
-                                <div className="header">{jobDetail.name}</div>
-                                <button onClick={() => setIsModalOpen(true)} className="btn-apply">
-                                    Apply Now
-                                </button>
-                                <Divider />
-                                <div className="skills">
-                                    {jobDetail.skills?.map((item, index) => (
-                                        <Tag key={index} color="gold">{item.name}</Tag>
-                                    ))}
-                                </div>
-                                <div className="salary">
-                                    <DollarOutlined />
-                                    <span>&nbsp;{(jobDetail.salary + "").replace(/\B(?=(\d{3})+(?!\d))/g, ',')} đ</span>
-                                </div>
-                                <div className="location">
-                                    <EnvironmentOutlined style={{ color: '#58aaab' }} />&nbsp;{jobDetail.location}
-                                </div>
-                                <div>
-                                    <HistoryOutlined /> {jobDetail.updatedAt ? dayjs(jobDetail.updatedAt).fromNow() : dayjs(jobDetail.createdAt).fromNow()}
-                                </div>
-                                <Divider />
-                                {parse(jobDetail.description)}
-                            </Col>
+              <>
+                {/* Title + Level/Active */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <Title level={3} style={{ marginBottom: 6 }}>
+                      {jobDetail?.name}
+                    </Title>
+                    <Space wrap size={[8, 8]}>
+                      {jobDetail?.level && pill(jobDetail.level, "geekblue")}
+                      {jobDetail?.active
+                        ? pill("Đang tuyển", "green")
+                        : pill("Tạm dừng", "volcano")}
+                    </Space>
+                  </div>
 
-                            <Col span={24} md={8}>
-                                <div className="company">
-                                    <img width={200} alt="Company Logo" src={`${import.meta.env.VITE_BACKEND_URL}/storage/company/${jobDetail.company?.logo}`} />
-                                    <div>{jobDetail.company?.name}</div>
-                                </div>
-                            </Col>
-                        </>
-                    )}
-                </Row>
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<ThunderboltFilled />}
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    Ứng tuyển ngay
+                  </Button>
+                </div>
+
+                {/* Meta row */}
+                <div style={{ marginTop: 14 }}>
+                  <Space size="large" wrap>
+                    <div style={metaItemStyle}>
+                      <DollarOutlined />
+                      <Text strong>{salaryText}</Text>
+                    </div>
+                    <div style={metaItemStyle}>
+                      <EnvironmentOutlined style={{ color: "#58aaab" }} />
+                      <Text>{jobDetail?.location || "Không xác định"}</Text>
+                    </div>
+                    <div style={metaItemStyle}>
+                      <HistoryOutlined />
+                      <Text>{updatedText}</Text>
+                    </div>
+                  </Space>
+                </div>
+
+                {/* Skills */}
+                {Array.isArray(jobDetail?.skills) && jobDetail.skills.length > 0 && (
+                  <>
+                    <Divider />
+                    <Space wrap size={[8, 8]}>
+                      {jobDetail.skills.map((s) => (
+                        <Tag key={s.id || s.name} color="gold">
+                          {s.name}
+                        </Tag>
+                      ))}
+                    </Space>
+                  </>
+                )}
+
+                {/* Description */}
+                <Divider />
+                <div style={{ color: "#1f2430" }}>
+                  {/* Nếu mô tả là HTML an toàn từ backend, parse; nếu không, hiển thị plain */}
+                  {jobDetail?.description
+                    ? parse(jobDetail.description)
+                    : <Text type="secondary">Chưa có mô tả cho công việc này.</Text>}
+                </div>
+              </>
             )}
-            <ApplyModal isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} jobDetail={jobDetail} />
-        </div>
-    );
+          </Card>
+        </Col>
+
+        {/* RIGHT: Company sticky card */}
+        <Col xs={24} md={8}>
+          <div style={{ position: "sticky", top: 16 }}>
+            <Card
+              bodyStyle={{ padding: 20, textAlign: "center" }}
+              style={{ borderRadius: 12, boxShadow: "0 4px 24px rgba(18,38,63,0.06)" }}
+            >
+              {loading ? (
+                <Skeleton.Avatar active shape="square" size={120} />
+              ) : companyLogo ? (
+                <div
+                  style={{
+                    height: 140,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#fafafa",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                    marginBottom: 12,
+                    overflow: "hidden",
+                  }}
+                >
+                  <img
+                    src={companyLogo}
+                    alt={jobDetail?.company?.name}
+                    style={{ maxWidth: 180, maxHeight: 100, objectFit: "contain" }}
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://via.placeholder.com/200x120.png?text=Company";
+                    }}
+                  />
+                </div>
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có logo" />
+              )}
+
+              {!loading && jobDetail?.company?.name && (
+                <>
+                  <Title level={5} style={{ marginBottom: 6 }}>
+                    {jobDetail.company.name}
+                  </Title>
+                  <Text type="secondary">Nhà tuyển dụng</Text>
+                </>
+              )}
+              <Divider />
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <Button block onClick={() => setIsModalOpen(true)} type="primary">
+                  Ứng tuyển ngay
+                </Button>
+                <Button block href={`/company/${jobDetail?.company?.id}`}>
+                  Xem trang công ty
+                </Button>
+              </Space>
+            </Card>
+          </div>
+        </Col>
+      </Row>
+
+      {/* Apply Modal */}
+      <ApplyModal
+        isModalOpen={isModalOpen}
+        setIsModalOpen={setIsModalOpen}
+        jobDetail={jobDetail}
+      />
+    </div>
+  );
 };
 
 export default ClientJobDetailPage;
