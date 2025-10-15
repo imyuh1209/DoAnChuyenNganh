@@ -22,6 +22,7 @@ import ManagePage from './pages/admin/job/manage.jsx';
 import ResumePage from './pages/admin/resume.jsx';
 import PermissionPage from './pages/admin/permission.jsx';
 import RolePage from './pages/admin/role.jsx';
+import SavedJobsPage from "./pages/job/saved.jobs";
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: '/job/:id', element: <ClientJobDetailPage /> },
       { path: '/company', element: <CompanyPage /> },
       { path: '/company/:id', element: <ClientCompanyDetailPage /> },
+      { path: "/saved-jobs", element: <SavedJobsPage /> }
     ],
   },
 

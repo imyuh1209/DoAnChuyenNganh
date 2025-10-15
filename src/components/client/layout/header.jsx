@@ -85,6 +85,9 @@ const Header = () => {
                 label: <NavLink to="/admin">Trang quản trị</NavLink>,
               },
               {
+                label: <NavLink to="/saved-jobs">Công việc đã lưu</NavLink>,
+              },
+              {
                 label: <span onClick={handleLogout}>Đăng xuất</span>,
                 key: "logout",
               },

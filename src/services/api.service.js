@@ -289,6 +289,12 @@ const callUpdateSubscriber = (data) => {
     const URL_BACKEND = "/api/v1/subscribers";
     return axios.put(URL_BACKEND, data);
 };
+// Save Job APIs
+const callSaveJob = (jobId) => axios.post(`/api/v1/saved-jobs?jobId=${jobId}`);
+const callFetchSavedJobs = () => axios.get(`/api/v1/saved-jobs`);
+const callDeleteSavedJobBySavedId = (savedId) => axios.delete(`/api/v1/saved-jobs/${savedId}`);
+// hoặc xoá theo jobId:
+const callUnsaveByJobId = (jobId) => axios.delete(`/api/v1/saved-jobs/${jobId}?byJobId=true`);
 
 
 
@@ -309,5 +315,10 @@ export {
     // Subscriber APIs
     callCreateSubscriber,
     callGetSubscriberSkills,
-    callUpdateSubscriber
+    callUpdateSubscriber,
+  // ... các export cũ
+  callSaveJob,
+  callFetchSavedJobs,
+  callDeleteSavedJobBySavedId,
+  callUnsaveByJobId,
 };

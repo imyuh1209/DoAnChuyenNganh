@@ -12,6 +12,7 @@ import {
   Empty,
   Tooltip,
   Alert,
+  message
 } from "antd";
 import {
   DollarOutlined,
@@ -29,7 +30,10 @@ import ApplyModal from "../../components/client/modal/apply.modal";
 import { callFetchJobById } from "../../services/api.service";
 import styles from "../../styles/client.module.scss";
 import { useNavigate, useParams } from "react-router-dom";
-
+import { HeartOutlined, HeartFilled } from "@ant-design/icons";
+import { callSaveJob, callFetchSavedJobs, callUnsaveByJobId } from "../../services/api.service";
+import { useContext } from "react";
+import { AuthContext } from "../../components/context/auth.context";
 dayjs.extend(relativeTime);
 const { Title, Text } = Typography;
 
@@ -53,9 +57,43 @@ const ClientJobDetailPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-
+const { user } = useContext(AuthContext);
+const [isSaved, setIsSaved] = useState(false);
   const backend = import.meta.env.VITE_BACKEND_URL;
 
+  useEffect(() => {
+  const checkSaved = async () => {
+    if (!id) return;
+    try {
+      const res = await callFetchSavedJobs();
+      const list = res?.data || [];
+      setIsSaved(list.some((i) => i.jobId === +id));
+    } catch (e) { 
+      console.error("Error fetching saved jobs:", e);
+    }
+  };
+  checkSaved();
+}, [id]);
+
+const toggleSave = async () => {
+  if (!user?.id) {
+    message.error("Vui lòng đăng nhập để lưu công việc");
+    return;
+  }
+  try {
+    if (isSaved) {
+      await callUnsaveByJobId(+id);
+      setIsSaved(false);
+      message.success("Đã bỏ lưu");
+    } else {
+      await callSaveJob(+id);
+      setIsSaved(true);
+      message.success("Đã lưu công việc");
+    }
+  } catch (e) {
+    message.error(e?.response?.data?.message || "Có lỗi xảy ra");
+  }
+};
   useEffect(() => {
     const fetchJobDetail = async () => {
       if (!id) return;
@@ -125,9 +163,6 @@ const ClientJobDetailPage = () => {
           Quay lại
         </Button>
         <Space>
-          <Tooltip title="Lưu công việc">
-            <Button icon={<StarOutlined />} />
-          </Tooltip>
           <Tooltip title="Chia sẻ">
             <Button icon={<ShareAltOutlined />} onClick={handleShare} />
           </Tooltip>
@@ -290,7 +325,16 @@ const ClientJobDetailPage = () => {
         setIsModalOpen={setIsModalOpen}
         jobDetail={jobDetail}
       />
+
+      <Button
+  type="text"
+  onClick={toggleSave}
+  icon={isSaved ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
+>
+  {isSaved ? "Đã lưu" : "Lưu job"}
+</Button>
     </div>
+    
   );
 };
 
